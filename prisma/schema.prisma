@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  leads        Lead[]
+  activities   Activity[] @relation("UserActivities")
+  createdAt    DateTime @default(now())
+}
+
+enum LeadStatus {
+  Lead
+  Disqualified
+  Invalid
+  Prospect
+  Customer
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  firstName     String
+  lastName      String
+  mobile        String     @unique
+  whatsappNumber String?
+  email         String?
+  status        LeadStatus @default(Lead)
+  source        String?
+  ownerId       String?
+  owner         User?      @relation(fields: [ownerId], references: [id])
+  createdAt     DateTime   @default(now())
+  activities    Activity[]
+  WebhookEvents  WebhookEvent[]
+}
+
+enum ActivityType {
+  call
+  sms
+  whatsapp
+  note
+  task
+}
+
+model Activity {
+  id          String     @id @default(cuid())
+  leadId      String
+  lead        Lead       @relation(fields: [leadId], references: [id])
+  type        ActivityType
+  text        String?
+  durationSec Int?
+  feedback    String?
+  createdById String?
+  createdBy   User?      @relation("UserActivities", fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+}
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  event         String
+  phone         String?
+  direction     String?
+  message       String?
+  messageType   String?
+  timestamp     DateTime?
+  raw           Json
+  matchedLeadId String?
+  matchedLead   Lead?    @relation(fields: [matchedLeadId], references: [id])
+  createdAt     DateTime @default(now())
+}
