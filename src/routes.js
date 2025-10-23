@@ -1,6 +1,6 @@
 import express from "express";
 import { login } from "./controllers/authController.js";
-import { listLeads, getLead, createLead, updateLead } from "./controllers/leadController.js";
+import { listLeads, getLead, createLead, updateLead, deleteLead } from "./controllers/leadController.js";
 import { authRequired } from "./middleware/auth.js";
 import { listActivities, addActivity } from "./controllers/activityController.js";
 import { incomingWebhook } from "./controllers/webhookController.js";
@@ -25,5 +25,9 @@ router.post("/leads/:id/activities", authRequired, addActivity);
 
 // WEBHOOK (no auth)
 router.post("/incoming-webhook", incomingWebhook);
+
+//DELETE
+router.delete("/leads/:id", authRequired, deleteLead);
+
 
 export default router;

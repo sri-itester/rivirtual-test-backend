@@ -1,77 +1,99 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
+// prisma/schema.prisma
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  leads        Lead[]
-  activities   Activity[] @relation("UserActivities")
-  createdAt    DateTime @default(now())
+generator client {
+  provider = "prisma-client-js"
 }
 
-enum LeadStatus {
-  Lead
-  Disqualified
-  Invalid
-  Prospect
-  Customer
-}
-
-model Lead {
-  id            String     @id @default(cuid())
-  firstName     String
-  lastName      String
-  mobile        String     @unique
-  whatsappNumber String?
-  email         String?
-  status        LeadStatus @default(Lead)
-  source        String?
-  ownerId       String?
-  owner         User?      @relation(fields: [ownerId], references: [id])
-  createdAt     DateTime   @default(now())
-  activities    Activity[]
-  WebhookEvents  WebhookEvent[]
+enum Role {
+  Admin
+  Manager
+  Associate
 }
 
 enum ActivityType {
-  call
-  sms
-  whatsapp
-  note
-  task
+  NOTE
+  CALL
+  SMS
+  WHATSAPP
+  EMAIL
+  TASK
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  phone        String?
+  role         Role
+
+  // REQUIRED for login/auth
+  passwordHash String
+
+  // Manager/Associate relation (self-join)
+  managerId    Int?
+  manager      User?    @relation("ManagerUserRelation", fields: [managerId], references: [id])
+  teamMembers  User[]   @relation("ManagerUserRelation")
+
+  // Activity actor
+  activities   Activity[] @relation("ActivityPerformer")
+
+  // Lead assignment
+  assignedLeads Lead[]    @relation("LeadAssignee")
+
+  createdAt    DateTime @default(now())
+}
+
+
+model Lead {
+  id                Int       @id @default(autoincrement())
+  salutation        String?
+  firstName         String
+  lastName          String
+  email             String?
+  countryCode       String?
+  mobile            String
+  whatsapp          String?
+  leadType          String?   // Buyer | Seller | Owner | Tenant
+  preferredLanguage String?
+  companyName       String?
+  country           String
+  state             String
+  city              String
+  leadStage         String    // Lead | Prospect | Customer | Disqualified | Invalid
+
+  assignedToId      Int?
+  assignedTo        User?     @relation("LeadAssignee", fields: [assignedToId], references: [id])
+
+  activities        Activity[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([assignedToId])
 }
 
 model Activity {
-  id          String     @id @default(cuid())
-  leadId      String
-  lead        Lead       @relation(fields: [leadId], references: [id])
-  type        ActivityType
-  text        String?
-  durationSec Int?
-  feedback    String?
-  createdById String?
-  createdBy   User?      @relation("UserActivities", fields: [createdById], references: [id])
-  createdAt   DateTime   @default(now())
+  id             Int          @id @default(autoincrement())
+  leadId         Int?
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull) // D2: keep activities
+  type           ActivityType
+  content        Json
+  performedById  Int?
+  performedBy    User?        @relation("ActivityPerformer", fields: [performedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([performedById])
 }
 
 model WebhookEvent {
-  id            String   @id @default(cuid())
-  event         String
-  phone         String?
-  direction     String?
-  message       String?
-  messageType   String?
-  timestamp     DateTime?
-  raw           Json
-  matchedLeadId String?
-  matchedLead   Lead?    @relation(fields: [matchedLeadId], references: [id])
-  createdAt     DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  type          String
+  payload       Json
+  createdAt     DateTime  @default(now())
 }
+
