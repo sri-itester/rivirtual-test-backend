@@ -5,6 +5,7 @@ import { listActivities, addActivity } from "./controllers/activityController.js
 import { listUsers } from "./controllers/userController.js";
 import { incomingWebhook } from "./controllers/webhookController.js";
 import { authRequired } from "./middleware/auth.js";
+import { getAnalyticsSummary } from "./controllers/analyticsController.js";
 
 const router = express.Router();
 
@@ -27,5 +28,8 @@ router.get("/users", authRequired, listUsers);
 
 // Webhook (no auth)
 router.post("/incoming-webhook", incomingWebhook);
+
+// Analytics
+router.get("/analytics/summary", authRequired, getAnalyticsSummary);
 
 export default router;
