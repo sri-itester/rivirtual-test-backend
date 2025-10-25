@@ -69,18 +69,33 @@ export async function updateLead(req, res) {
     Object.entries(req.body).filter(([k]) => ALLOWED_FIELDS.includes(k))
   );
 
+  // ✅ Safely parse assignedToId if present
+  if ("assignedToId" in data) {
+    const val = Number(data.assignedToId);
+    data.assignedToId = Number.isNaN(val) ? null : val;
+  }
+
   try {
     const lead = await prisma.lead.update({
       where: { id },
       data,
+      include: {
+        assignedTo: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
+
     res.json(lead);
   } catch (e) {
     console.error(e);
-    if (e.code === "P2025") return res.status(404).json({ message: "Lead not found" });
-    res.status(400).json({ message: e.message });
+    if (e.code === "P2025") {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+    res.status(400).json({ message: e.message || "Failed to update lead" });
   }
 }
+
 
 // DELETE /leads/:id
 export async function deleteLead(req, res) {

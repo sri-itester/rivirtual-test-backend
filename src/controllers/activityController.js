@@ -1,40 +1,43 @@
-import { PrismaClient, ActivityType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-// GET /leads/:id/activities
 export async function listActivities(req, res) {
   const leadId = parseInt(req.params.id, 10);
-  if (Number.isNaN(leadId)) return res.status(400).json({ message: "Invalid id" });
-
-  const items = await prisma.activity.findMany({
-    where: { leadId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      performedBy: { select: { id: true, name: true, email: true } },
-    },
-  });
-  res.json(items);
+  try {
+    const activities = await prisma.activity.findMany({
+      where: { leadId },
+      include: {
+        performedBy: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(activities);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ message: e.message });
+  }
 }
 
-// POST /leads/:id/activities
 export async function addActivity(req, res) {
   const leadId = parseInt(req.params.id, 10);
-  if (Number.isNaN(leadId)) return res.status(400).json({ message: "Invalid id" });
+  const { type, content } = req.body;
+  const user = req.user;
 
-  const { type, content, performedById } = req.body;
+  if (!type || !content)
+    return res.status(400).json({ message: "type and content are required" });
 
-  if (!type || !Object.keys(ActivityType).includes(type)) {
-    return res.status(400).json({ message: "Invalid activity type" });
+  try {
+    const activity = await prisma.activity.create({
+      data: {
+        leadId,
+        type,
+        content,
+        performedById: user?.userId || null,
+      },
+    });
+    res.json(activity);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ message: e.message });
   }
-
-  const activity = await prisma.activity.create({
-    data: {
-      leadId,
-      type,
-      content: content ?? {},
-      performedById: performedById ?? null, // can be null for now
-    },
-  });
-
-  res.status(201).json(activity);
 }

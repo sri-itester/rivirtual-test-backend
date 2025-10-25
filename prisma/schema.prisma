@@ -24,29 +24,26 @@ enum ActivityType {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  phone        String?
-  role         Role
-
-  // REQUIRED for login/auth
-  passwordHash String
+  id             Int        @id @default(autoincrement())
+  name           String
+  email          String     @unique
+  phone          String?
+  role           Role
+  passwordHash   String
 
   // Manager/Associate relation (self-join)
-  managerId    Int?
-  manager      User?    @relation("ManagerUserRelation", fields: [managerId], references: [id])
-  teamMembers  User[]   @relation("ManagerUserRelation")
+  managerId      Int?
+  manager        User?      @relation("ManagerUserRelation", fields: [managerId], references: [id])
+  teamMembers    User[]     @relation("ManagerUserRelation")
 
   // Activity actor
-  activities   Activity[] @relation("ActivityPerformer")
+  activities     Activity[] @relation("ActivityPerformer")
 
-  // Lead assignment
-  assignedLeads Lead[]    @relation("LeadAssignee")
+  // Lead assignment (reverse relation)
+  assignedLeads  Lead[]     @relation("LeadAssignee")
 
-  createdAt    DateTime @default(now())
+  createdAt      DateTime   @default(now())
 }
-
 
 model Lead {
   id                Int       @id @default(autoincrement())
@@ -65,8 +62,9 @@ model Lead {
   city              String
   leadStage         String    // Lead | Prospect | Customer | Disqualified | Invalid
 
+  // ✅ Lead assignment (many-to-one)
   assignedToId      Int?
-  assignedTo        User?     @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  assignedTo        User?     @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   activities        Activity[]
 
@@ -79,7 +77,7 @@ model Lead {
 model Activity {
   id             Int          @id @default(autoincrement())
   leadId         Int?
-  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull) // D2: keep activities
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
   type           ActivityType
   content        Json
   performedById  Int?
@@ -96,4 +94,3 @@ model WebhookEvent {
   payload       Json
   createdAt     DateTime  @default(now())
 }
-
